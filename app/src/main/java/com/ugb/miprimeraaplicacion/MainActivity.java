@@ -55,14 +55,12 @@ public class MainActivity extends AppCompatActivity {
             double resultado = 0;
             String operacion = "";
 
-            // Obtener la operación seleccionada
             int selectedId = radioGroupOperaciones.getCheckedRadioButtonId();
             if (selectedId == -1) {
                 lblRespuesta.setText("Selecciona una operación");
                 return;
             }
 
-            // Obtener el RadioButton seleccionado
             RadioButton selectedRadioButton = findViewById(selectedId);
             String opcion = selectedRadioButton.getText().toString();
 
@@ -94,9 +92,37 @@ public class MainActivity extends AppCompatActivity {
                 default:
                     lblRespuesta.setText("Operación no válida");
                     return;
+                case "Raíz":
+                    if (num2 == 0) {
+                        lblRespuesta.setText("Error: No se puede calcular la raíz con índice 0");
+                        return;
+                    }
+                    resultado = Math.pow(num1, 1.0 / num2);
+                    operacion = "Raíz de " + num1 + " con índice " + num2;
+                    break;
+                case "Porcentaje":
+                    resultado = (num1 * num2) / 100;
+                    operacion = "Porcentaje";
+                    break;
+                case "Factorial":
+                    if (num1 < 0) {
+                        lblRespuesta.setText("Error: No se puede calcular el factorial de un número negativo");
+                        return;
+                    }
+                    resultado = calcularFactorial((int) num1);
+                    operacion = "Factorial de " + (int) num1;
+                    break;
+                case "Módulo":
+                    if (num2 == 0) {
+                        lblRespuesta.setText("Error: No se puede dividir entre 0");
+                        return;
+                    }
+                    resultado = num1 % num2;
+                    operacion = "Módulo (Residuo)";
+                    break;
             }
 
-            // Determinar si el resultado es entero o decimal
+
             String resultadoStr;
             if (resultado == (int) resultado) {
                 resultadoStr = String.format("%d", (int) resultado);
@@ -104,11 +130,23 @@ public class MainActivity extends AppCompatActivity {
                 resultadoStr = String.format("%.2f", resultado);
             }
 
-            // Mostrar el resultado
+
             lblRespuesta.setText(operacion + ": " + resultadoStr);
 
         } catch (NumberFormatException e) {
             lblRespuesta.setText("Error: Ingresa números válidos");
         }
+    }
+
+    //para calcular la factorial
+    private long calcularFactorial(int num) {
+        if (num == 0 || num == 1) {
+            return 1;
+        }
+        long resultado = 1;
+        for (int i = 2; i <= num; i++) {
+            resultado *= i;
+        }
+        return resultado;
     }
 }
