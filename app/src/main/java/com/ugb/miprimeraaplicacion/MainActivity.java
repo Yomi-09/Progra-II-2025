@@ -1,145 +1,177 @@
 package com.ugb.miprimeraaplicacion;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.widget.*;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.annotation.Nullable;
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;  // Asegúrate de tener esta importación
+
+import org.json.JSONObject;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
-    EditText edtConsumo, etCantidad;
-    Button btnCalcularAgua, btnConvertir;
-    TextView txtResultadoAgua, tvResultado;
-    Spinner spinnerFrom, spinnerTo;
-    TabHost tabHost;
+    FloatingActionButton fab;
+    Button btn;
+    TextView tempVal;
+    DB db;
+    String accion = "nuevo", idproducto = "", id = "", rev = "";
+    ImageView img;
+    String urlCompletaFoto = "";
+    Intent tomarFotoIntent;
+    utilidades utls;
+    detectarInternet di;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Configuración del TabHost
-        tabHost = findViewById(R.id.tabHost);
-        tabHost.setup();
+        utls = new utilidades();
+        img = findViewById(R.id.imgFotoProducto);
+        db = new DB(this);
+        btn = findViewById(R.id.btnGuardarProducto);
+        btn.setOnClickListener(view -> guardarProducto());
 
-        TabHost.TabSpec spec1 = tabHost.newTabSpec("Tab1");
-        spec1.setIndicator("Pago de Agua");
-        spec1.setContent(R.id.tab1);
-        tabHost.addTab(spec1);
+        fab = findViewById(R.id.fabListaProductos);
+        fab.setOnClickListener(view -> abrirVentana());
 
-        TabHost.TabSpec spec2 = tabHost.newTabSpec("Tab2");
-        spec2.setIndicator("Conversor de Área");
-        spec2.setContent(R.id.tab2);
-        tabHost.addTab(spec2);
-
-        // Referencias a los elementos de la UI
-        edtConsumo = findViewById(R.id.edtConsumo);
-        btnCalcularAgua = findViewById(R.id.btnCalcularAgua);
-        txtResultadoAgua = findViewById(R.id.txtResultadoAgua);
-
-        spinnerFrom = findViewById(R.id.spinnerFrom);
-        spinnerTo = findViewById(R.id.spinnerTo);
-        etCantidad = findViewById(R.id.etCantidad);
-        btnConvertir = findViewById(R.id.btnConvertir);
-        tvResultado = findViewById(R.id.tvResultado);
-
-        // Cargar opciones en los Spinners
-        String[] unidades = {"Pie Cuadrado", "Vara Cuadrada", "Yarda Cuadrada", "Metro Cuadrado", "Tareas", "Manzana", "Hectárea"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, unidades);
-        spinnerFrom.setAdapter(adapter);
-        spinnerTo.setAdapter(adapter);
-
-        // Botón para calcular pago del agua
-        btnCalcularAgua.setOnClickListener(v -> calcularPagoAgua());
-
-        // Botón para conversor de área
-        btnConvertir.setOnClickListener(v -> convertirArea());
+        mostrarDatos();
+        tomarFoto();
     }
 
-    private void calcularPagoAgua() {
-        double consumo = Double.parseDouble(edtConsumo.getText().toString());
-        double pago = 0;
+    private void mostrarDatos() {
+        try {
+            Bundle parametros = getIntent().getExtras();
+            accion = parametros.getString("accion");
+            if (accion.equals("modificar")) {
+                JSONObject datos = new JSONObject(parametros.getString("producto"));
+                id = datos.getString("_id");
+                rev = datos.getString("_rev");
+                idproducto = datos.getString("idproducto");
 
-        if (consumo <= 18) {
-            pago = 6;
-        } else if (consumo <= 28) {
-            pago = 6 + (consumo - 18) * 0.45;
-        } else {
-            pago = 6 + (10 * 0.45) + (consumo - 28) * 0.65;
+                ((TextView) findViewById(R.id.txtNombre)).setText(datos.getString("nombre"));
+                ((TextView) findViewById(R.id.txtPrecio)).setText(datos.getString("precio"));
+                ((TextView) findViewById(R.id.txtCosto)).setText(datos.getString("costo"));
+                ((TextView) findViewById(R.id.txtGanancias)).setText(datos.getString("ganancias"));
+
+                urlCompletaFoto = datos.getString("urlFoto");
+                img.setImageURI(Uri.parse(urlCompletaFoto));
+            } else {
+                idproducto = utls.generarUnicoId();
+            }
+        } catch (Exception e) {
+            mostrarMsg("Error: " + e.getMessage());
         }
-
-        txtResultadoAgua.setText("Pago: $" + String.format("%.2f", pago));
     }
 
-    private void convertirArea() {
-        double cantidad = Double.parseDouble(etCantidad.getText().toString());
-        String unidadDesde = spinnerFrom.getSelectedItem().toString();
-        String unidadHasta = spinnerTo.getSelectedItem().toString();
-        double factorConversion = obtenerFactorConversion(unidadDesde, unidadHasta);
-        double resultado = cantidad * factorConversion;
-        tvResultado.setText("Resultado: " + String.format("%.4f", resultado));
+    private void tomarFoto() {
+        img.setOnClickListener(view -> {
+            tomarFotoIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            File fotoProducto;
+            try {
+                fotoProducto = crearImagenProducto();
+                if (fotoProducto != null) {
+                    Uri uriFotoProducto = FileProvider.getUriForFile(MainActivity.this,
+                            "com.ugb.miprimeraaplicacion.fileprovider", fotoProducto);
+                    tomarFotoIntent.putExtra(MediaStore.EXTRA_OUTPUT, uriFotoProducto);
+                    startActivityForResult(tomarFotoIntent, 1);
+                } else {
+                    mostrarMsg("No se pudo crear la imagen.");
+                }
+            } catch (Exception e) {
+                mostrarMsg("Error: " + e.getMessage());
+            }
+        });
     }
 
-    private double obtenerFactorConversion(String desde, String hasta) {
-        // Factores de conversión entre las unidades
-        double metroCuadrado = 1;
-        double pieCuadrado = 0.092903;
-        double varaCuadrada = 0.6987;
-        double yardaCuadrada = 0.836127;
-        double tarea = 437.5;
-        double manzana = 7000;
-        double hectarea = 10000;
-
-        double factorDesde;
-        switch (desde) {
-            case "Pie Cuadrado":
-                factorDesde = pieCuadrado;
-                break;
-            case "Vara Cuadrada":
-                factorDesde = varaCuadrada;
-                break;
-            case "Yarda Cuadrada":
-                factorDesde = yardaCuadrada;
-                break;
-            case "Tareas":
-                factorDesde = tarea;
-                break;
-            case "Manzana":
-                factorDesde = manzana;
-                break;
-            case "Hectárea":
-                factorDesde = hectarea;
-                break;
-            default:
-                factorDesde = metroCuadrado;
-                break;
-
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        try {
+            if (requestCode == 1 && resultCode == RESULT_OK) {
+                img.setImageURI(Uri.parse(urlCompletaFoto));
+            } else {
+                mostrarMsg("No se tomó la foto.");
+            }
+        } catch (Exception e) {
+            mostrarMsg("Error: " + e.getMessage());
         }
+    }
 
-        double factorHasta;
-        switch (hasta) {
-            case "Pie Cuadrado":
-                factorHasta = pieCuadrado;
-                break;
-            case "Vara Cuadrada":
-                factorHasta = varaCuadrada;
-                break;
-            case "Yarda Cuadrada":
-                factorHasta = yardaCuadrada;
-                break;
-            case "Tareas":
-                factorHasta = tarea;
-                break;
-            case "Manzana":
-                factorHasta = manzana;
-                break;
-            case "Hectárea":
-                factorHasta = hectarea;
-                break;
-            default:
-                factorHasta = metroCuadrado;
-                break;
+    private File crearImagenProducto() throws Exception {
+        String fechaHoraMs = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()),
+                fileName = "imagen_" + fechaHoraMs + "_";
+        File dirAlmacenamiento = getExternalFilesDir(Environment.DIRECTORY_DCIM);
+        if (!dirAlmacenamiento.exists()) {
+            dirAlmacenamiento.mkdir();
         }
+        File image = File.createTempFile(fileName, ".jpg", dirAlmacenamiento);
+        urlCompletaFoto = image.getAbsolutePath();
+        return image;
+    }
 
+    private void mostrarMsg(String msg) {
+        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+    }
 
-        return factorDesde / factorHasta;
+    private void abrirVentana() {
+        Intent intent = new Intent(this, ListaProductos.class);
+        startActivity(intent);
+    }
+
+    private void guardarProducto() {
+        try {
+            String nombre = ((TextView) findViewById(R.id.txtNombre)).getText().toString();
+            String precio = ((TextView) findViewById(R.id.txtPrecio)).getText().toString();
+            String costo = ((TextView) findViewById(R.id.txtCosto)).getText().toString();
+            String ganancias = ((TextView) findViewById(R.id.txtGanancias)).getText().toString();
+
+            JSONObject datosProducto = new JSONObject();
+            if (accion.equals("modificar")) {
+                datosProducto.put("_id", id);
+                datosProducto.put("_rev", rev);
+            }
+            datosProducto.put("idproducto", idproducto);
+            datosProducto.put("nombre", nombre);
+            datosProducto.put("precio", precio);
+            datosProducto.put("costo", costo);
+            datosProducto.put("ganancias", ganancias);
+            datosProducto.put("urlFoto", urlCompletaFoto);
+
+            di = new detectarInternet(this);
+            if (di.hayConexionInternet()) {
+                enviarDatosServidor objEnviarDatos = new enviarDatosServidor(this);
+                String respuesta = objEnviarDatos.execute(datosProducto.toString(), "POST", utilidades.url_mto).get();
+                JSONObject respuestaJSON = new JSONObject(respuesta);
+                if (respuestaJSON.getBoolean("ok")) {
+                    id = respuestaJSON.getString("id");
+                    rev = respuestaJSON.getString("rev");
+                } else {
+                    mostrarMsg("Error al guardar en CouchDB: " + respuestaJSON.getString("msg"));
+                }
+            }
+
+            String[] datosLocales = {idproducto, nombre, precio, costo, ganancias, urlCompletaFoto};
+            db.administrar_javier(accion, datosLocales);
+
+            Toast.makeText(getApplicationContext(), "Registro guardado con éxito en ambas bases de datos.", Toast.LENGTH_LONG).show();
+            abrirVentana();
+        } catch (Exception e) {
+            mostrarMsg("Error al guardar: " + e.getMessage());
+        }
     }
 }
