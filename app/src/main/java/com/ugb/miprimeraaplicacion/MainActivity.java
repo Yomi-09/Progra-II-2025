@@ -166,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             String[] datosLocales = {idproducto, nombre, precio, costo, ganancias, urlCompletaFoto};
-            db.administrar_javier(accion, datosLocales);
+            db.administrar_productos(accion, datosLocales);
 
             Toast.makeText(getApplicationContext(), "Registro guardado con éxito en ambas bases de datos.", Toast.LENGTH_LONG).show();
             abrirVentana();
