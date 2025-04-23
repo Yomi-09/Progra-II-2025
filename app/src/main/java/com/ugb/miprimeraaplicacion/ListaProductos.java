@@ -7,6 +7,8 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.content.Intent;
+
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -56,7 +58,8 @@ public class ListaProductos extends AppCompatActivity {
         fabAgregarProducto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Aquí puedes abrir un formulario para agregar productos
+                Intent intent = new Intent(ListaProductos.this, MainActivity.class);
+                startActivity(intent);
             }
         });
     }

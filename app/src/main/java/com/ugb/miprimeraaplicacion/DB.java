@@ -32,11 +32,11 @@ public class DB extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // Aquí puedes manejar las actualizaciones de base de datos si es necesario
-        db.execSQL("DROP TABLE IF EXISTS javier");
+        db.execSQL("DROP TABLE IF EXISTS ListaProductos");
         onCreate(db);
     }
 
-    public String administrar_javier(String accion, String[] datos) {
+    public String administrar_productos(String accion, String[] datos) {
         SQLiteDatabase db = null;
         try {
             db = this.getWritableDatabase();
