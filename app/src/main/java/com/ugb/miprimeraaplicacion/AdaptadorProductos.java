@@ -1,41 +1,66 @@
-package com.ugb.miprimeraaplicacion;  // Asegúrate de que el paquete coincida con el de la clase productos
-import com.ugb.miprimeraaplicacion.productos;  // Ajusta el paquete según sea necesario
+package com.ugb.miprimeraaplicacion;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
-public class AdaptadorProductos extends ArrayAdapter<productos> {
+public class AdaptadorProductos extends BaseAdapter {
+    Context context;
+    ArrayList<productos> alProductos;
+    productos misProductos;
+    LayoutInflater inflater;
 
-    private Context context;
-    private ArrayList<productos> productosList;
-
-    // Constructor del adaptador
     public AdaptadorProductos(Context context, ArrayList<productos> alProductos) {
-        super(context, 0, alProductos);  // Usamos el constructor de ArrayAdapter
         this.context = context;
-        this.productosList = alProductos;
+        this.alProductos = alProductos;
+    }
+
+    @Override
+    public int getCount() {
+        return alProductos.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return alProductos.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return 0;
     }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        if (convertView == null) {
-            convertView = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_1, parent, false);
+        inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View itemView = inflater.inflate(R.layout.fotos, parent, false);
+        try {
+            misProductos = alProductos.get(position);
+
+            TextView tempVal = itemView.findViewById(R.id.lblNombreAdaptador);
+            tempVal.setText(misProductos.getNombre());
+
+            tempVal = itemView.findViewById(R.id.lblPrecioAdaptador);
+            tempVal.setText(misProductos.getIdproducto());
+
+            tempVal = itemView.findViewById(R.id.lblPrecioAdaptador);
+            tempVal.setText(misProductos.getGanancia() + "");
+
+            ImageView img = itemView.findViewById(R.id.imgFotoAdaptador);
+            Bitmap bitmap = BitmapFactory.decodeFile(misProductos.getUrlFoto());
+            img.setImageBitmap(bitmap);
+        } catch (Exception e) {
+            Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
-
-        // Obtener el producto en la posición actual
-        productos producto = productosList.get(position);
-
-        // Establecer los valores en la vista
-        TextView textView = convertView.findViewById(android.R.id.text1);
-        textView.setText(producto.getNombre() + " - Ganancia: " + producto.getGanancia());
-
-        return convertView;
+        return itemView;
     }
 }
