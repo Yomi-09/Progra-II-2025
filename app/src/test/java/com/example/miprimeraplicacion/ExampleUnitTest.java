@@ -1,4 +1,4 @@
-package com.ugb.miprimeraaplicacion;
+package com.example.miprimeraplicacion;
 
 import org.junit.Test;
 
